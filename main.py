@@ -4,6 +4,7 @@ import os
 from dotenv import load_dotenv
 from live_translator import LiveTranslator
 from models import TranslationConfig
+from config import settings
 from logger import get_logger
 
 # Load environment variables
@@ -16,11 +17,11 @@ logger = get_logger(__name__)
 def main():
     """Main entry point for the translator."""
     try:
-        # Initialize translator with default configuration
+        # Initialize translator with configuration from .env
         config = TranslationConfig(
-            source_language="en",
-            target_language="vi",
-            whisper_model_size="base"
+            source_language=settings.source_language,
+            target_language=settings.target_language,
+            whisper_model_size=settings.whisper_model_size
         )
         
         translator = LiveTranslator(config=config)
@@ -34,7 +35,8 @@ def main():
         #     print("="*70)
         
         # Option 2: Continuous translation (uncomment to run)
-        translator.continuous_translation(chunk_duration=5)
+        # Force 10s chunk duration for translations
+        translator.continuous_translation(chunk_duration=10)
         
         # Option 3: View translation history (uncomment to run)
         # history = translator.get_translation_history()

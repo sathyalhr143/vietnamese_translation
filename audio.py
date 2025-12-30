@@ -24,7 +24,7 @@ class AudioProcessor:
         self.whisper_model = None
         self.load_whisper_model(self.config.model_size)
     
-    def load_whisper_model(self, model_size: str = "base"):
+    def load_whisper_model(self, model_size: str = "small"):
         """
         Load OpenAI Whisper model.
         
@@ -91,10 +91,13 @@ class AudioProcessor:
             # Convert list back to numpy array
             audio_array = np.array(audio.data, dtype=np.float32)
             
+            # checking the language set in config
+            print(self.config.language, "language given to whisper")
+            
             result = self.whisper_model.transcribe(
                 audio_array,
                 language=self.config.language,
-                fp16=False  # Set to False for CPU
+                fp16=True  # Set to False for CPU
             )
             
             text = result['text'].strip()

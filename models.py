@@ -56,11 +56,11 @@ class TranslationResponse(BaseModel):
 
 class TranslationConfig(BaseModel):
     """Configuration model for translation parameters."""
-    source_language: str = Field(default="en", description="Source language code")
-    target_language: str = Field(default="vi", description="Target language code")
+    source_language: str = Field(default="vi", description="Source language code")
+    target_language: str = Field(default="en", description="Target language code")
     audio_sample_rate: int = Field(default=16000, description="Audio sample rate in Hz")
-    audio_chunk_duration: int = Field(default=5, description="Audio chunk duration in seconds")
-    whisper_model_size: str = Field(default="base", description="Whisper model size")
+    audio_chunk_duration: int = Field(default=10, description="Audio chunk duration in seconds")
+    whisper_model_size: str = Field(default="small", description="Whisper model size")
     db_path: str = Field(default="translations.db", description="Path to SQLite database")
     
     class Config:
@@ -70,9 +70,9 @@ class TranslationConfig(BaseModel):
 class AudioProcessingConfig(BaseModel):
     """Configuration for audio processing."""
     sample_rate: int = Field(default=16000, description="Sample rate in Hz")
-    chunk_duration: int = Field(default=5, description="Duration per chunk in seconds")
-    model_size: str = Field(default="base", description="Whisper model size")
-    language: str = Field(default="en", description="Language code")
+    chunk_duration: int = Field(default=10, description="Duration per chunk in seconds")
+    model_size: str = Field(default="small", description="Whisper model size")
+    language: str = Field(default="vi", description="Language code")
 
 
 class DatabaseConfig(BaseModel):

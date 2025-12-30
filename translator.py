@@ -28,8 +28,8 @@ class Translator:
     def translate_text(
         self,
         text: str,
-        source_lang: str = "en",
-        target_lang: str = "vi"
+        source_lang: str = "vi",
+        target_lang: str = "en"
     ) -> str:
         """
         Translate text from source to target language using OpenAI 4o mini.
@@ -46,6 +46,9 @@ class Translator:
             return ""
         
         try:
+            # Enforce Vietnamese -> English translations only
+            source_lang = "vi"
+            target_lang = "en"
             logger.info(f"Translating '{text}' from {source_lang} to {target_lang}")
             
             # Language names for the prompt
