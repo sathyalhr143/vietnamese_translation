@@ -4,9 +4,10 @@ from openai import OpenAI
 import os
 from typing import Optional
 from src.logger import get_logger
+from dotenv import load_dotenv
 
 logger = get_logger(__name__)
-
+load_dotenv()
 
 class Translator:
     """Handle translation operations using OpenAI 4o mini."""
