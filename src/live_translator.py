@@ -1,12 +1,12 @@
 """Main orchestration module for live translation pipeline."""
 
 from typing import Optional, List
-from models import TranslationConfig, TranslationResponse, TranslationRecord, AudioProcessingConfig, DatabaseConfig
-from database import TranslationDatabase
-from audio import AudioProcessor
-from translator import Translator
+from src.models import TranslationConfig, TranslationResponse, TranslationRecord, AudioProcessingConfig, DatabaseConfig
+from src.database import TranslationDatabase
+from src.audio import AudioProcessor
+from src.translator import Translator
 from datetime import datetime
-from logger import get_logger
+from src.logger import get_logger
 
 logger = get_logger(__name__)
 

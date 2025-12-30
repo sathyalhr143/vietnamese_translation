@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: vietnamese-translation
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - SOURCE_LANGUAGE=vi
+      - TARGET_LANGUAGE=en
+      - WHISPER_MODEL_SIZE=small
+      - AUDIO_SAMPLE_RATE=16000
+      - AUDIO_CHUNK_DURATION=10
+      - DB_PATH=/app/translations.db
+      - LOG_LEVEL=INFO
+      - PORT=8000
+    volumes:
+      - ./:/app
+      - ./logs:/app/logs
+      - ./translations.db:/app/translations.db
+    stdin_open: true
+    tty: true
+    # Uncomment for development with auto-reload
+    # command: python -m uvicorn src.app:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

@@ -2,10 +2,9 @@
 
 import os
 from dotenv import load_dotenv
-from live_translator import LiveTranslator
-from models import TranslationConfig
-from config import settings
-from logger import get_logger
+from src.live_translator import LiveTranslator
+from src.models import TranslationConfig
+from src.logger import get_logger
 
 # Load environment variables
 load_dotenv()
@@ -13,15 +12,20 @@ load_dotenv()
 # Get logger
 logger = get_logger(__name__)
 
+# Hard-coded configuration
+SOURCE_LANGUAGE = "vi"  # Vietnamese
+TARGET_LANGUAGE = "en"  # English
+WHISPER_MODEL_SIZE = "small"  # Model size: tiny, base, small, medium, large
+
 
 def main():
     """Main entry point for the translator."""
     try:
-        # Initialize translator with configuration from .env
+        # Initialize translator with hard-coded configuration
         config = TranslationConfig(
-            source_language=settings.source_language,
-            target_language=settings.target_language,
-            whisper_model_size=settings.whisper_model_size
+            source_language=SOURCE_LANGUAGE,
+            target_language=TARGET_LANGUAGE,
+            whisper_model_size=WHISPER_MODEL_SIZE
         )
         
         translator = LiveTranslator(config=config)

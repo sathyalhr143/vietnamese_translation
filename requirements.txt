@@ -7,4 +7,7 @@ openai
 pydub
 python-dotenv
 pydantic
-pydantic-settings
+pydantic-settingsfastapi
+uvicorn
+python-multipart
+librosa

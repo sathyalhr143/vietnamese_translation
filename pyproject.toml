@@ -1,0 +1,18 @@
+[project]
+name = "vietnamese-translation"
+version = "0.1.0"
+description = "Cloud-first live Vietnamese → English translation service"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.98.0",
+    "uvicorn[standard]>=0.22.0",
+    "websockets>=11.0",
+    "python-multipart>=0.0.6",
+    "requests>=2.31.0",
+    "sounddevice>=0.4.5",
+    "numpy>=1.24",
+    "soundfile>=0.12.0",
+]
+
+[tool.uv]
+# uv configuration

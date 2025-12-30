@@ -3,7 +3,7 @@
 from openai import OpenAI
 import os
 from typing import Optional
-from logger import get_logger
+from src.logger import get_logger
 
 logger = get_logger(__name__)
 

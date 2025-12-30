@@ -3,8 +3,8 @@
 import sqlite3
 from typing import Optional, List
 from pathlib import Path
-from models import TranslationRecord, DatabaseConfig
-from logger import get_logger
+from src.models import TranslationRecord, DatabaseConfig
+from src.logger import get_logger
 
 logger = get_logger(__name__)
 

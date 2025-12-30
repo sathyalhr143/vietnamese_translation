@@ -4,8 +4,8 @@ import whisper
 import sounddevice as sd
 import numpy as np
 from typing import Dict
-from models import AudioData, TranscriptionResult, AudioProcessingConfig
-from logger import get_logger
+from src.models import AudioData, TranscriptionResult, AudioProcessingConfig
+from src.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -111,4 +111,47 @@ class AudioProcessor:
             )
         except Exception as e:
             logger.error(f"Error transcribing audio: {e}")
+            raise    
+    def transcribe_audio_from_file(self, file_path: str) -> TranscriptionResult:
+        """
+        Transcribe audio from a file (supports WAV, MP3, OGG, FLAC, etc.).
+        
+        Args:
+            file_path: Path to audio file
+            
+        Returns:
+            TranscriptionResult instance
+        """
+        if self.whisper_model is None:
+            self.load_whisper_model(self.config.model_size)
+        
+        try:
+            logger.info(f"Transcribing audio file: {file_path}")
+            
+            result = self.whisper_model.transcribe(
+                file_path,
+                language=self.config.language,
+                fp16=True  # Set to False for CPU
+            )
+            
+            text = result['text'].strip()
+            logger.info(f"Transcription completed: {text}")
+            
+            # Get duration from result if available
+            duration = result.get('duration', 0.0)
+            if duration == 0:
+                import librosa
+                try:
+                    duration = librosa.get_duration(filename=file_path)
+                except:
+                    duration = 0.0
+            
+            return TranscriptionResult(
+                text=text,
+                language=self.config.language,
+                confidence=result.get('confidence', 0.0),
+                duration=duration
+            )
+        except Exception as e:
+            logger.error(f"Error transcribing audio file: {e}")
             raise

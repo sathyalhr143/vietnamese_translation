@@ -100,3 +100,7 @@ ipython_config.py
 *.temp
 temp/
 tmp/
+# Render deployment
+.render/
+render.yaml.local
+render-build.log
