@@ -33,7 +33,7 @@ class AudioProcessor:
         """
         try:
             logger.info(f"Loading Whisper model: {model_size}")
-            self.whisper_model = whisper.load_model(model_size)
+            self.whisper_model = whisper.load_model(model_size, )
             logger.info("Whisper model loaded successfully")
         except Exception as e:
             logger.error(f"Error loading Whisper model: {e}")
@@ -103,10 +103,18 @@ class AudioProcessor:
             text = result['text'].strip()
             logger.info(f"Transcription completed: {text}")
             
+            # Calculate average confidence from segments
+            confidence = 0.0
+            if 'segments' in result and result['segments']:
+                confidences = [seg.get('avg_logprob', 0.0) for seg in result['segments']]
+                # Convert log probabilities to confidence scores (0-1 range)
+                # avg_logprob is typically between -1 and 0, with 0 being highest confidence
+                confidence = np.mean([np.exp(c) for c in confidences]) if confidences else 0.0
+            
             return TranscriptionResult(
                 text=text,
                 language=self.config.language,
-                confidence=result.get('confidence', 0.0),
+                confidence=confidence,
                 duration=audio.duration_seconds
             )
         except Exception as e:
@@ -137,6 +145,14 @@ class AudioProcessor:
             text = result['text'].strip()
             logger.info(f"Transcription completed: {text}")
             
+            # Calculate average confidence from segments
+            confidence = 0.0
+            if 'segments' in result and result['segments']:
+                confidences = [seg.get('avg_logprob', 0.0) for seg in result['segments']]
+                # Convert log probabilities to confidence scores (0-1 range)
+                # avg_logprob is typically between -1 and 0, with 0 being highest confidence
+                confidence = np.mean([np.exp(c) for c in confidences]) if confidences else 0.0
+            
             # Get duration from result if available
             duration = result.get('duration', 0.0)
             if duration == 0:
@@ -149,7 +165,7 @@ class AudioProcessor:
             return TranscriptionResult(
                 text=text,
                 language=self.config.language,
-                confidence=result.get('confidence', 0.0),
+                confidence=confidence,
                 duration=duration
             )
         except Exception as e:

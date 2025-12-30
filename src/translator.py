@@ -73,7 +73,10 @@ class Translator:
                 messages=[
                     {
                         "role": "system",
-                        "content": f"You are a professional translator. Translate the user's text from {source_lang_name} to {target_lang_name}. Respond with only the translated text, no explanations."
+                        "content": f"""You are a professional translator. 
+                        Translate the user's text from {source_lang_name} to {target_lang_name} 
+                        with the highest accuracy, fluency, and emotional nuance. 
+                        Respond with only the translated text, no explanations."""
                     },
                     {
                         "role": "user",

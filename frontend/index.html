@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vietnamese Translation Service</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🌐 Vietnamese Translation</h1>
+            <p class="subtitle">Real-time Vietnamese ↔ English Translation Service</p>
+        </header>
+        
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('text')">📝 Text Translation</button>
+            <button class="tab-btn" onclick="switchTab('audio')">🎤 Upload Audio</button>
+            <button class="tab-btn" onclick="switchTab('live')">🔴 Live Recording</button>
+            <button class="tab-btn" onclick="switchTab('history')">📚 History</button>
+        </div>
+        
+        <!-- Text Translation Tab -->
+        <div id="text" class="tab-content active">
+            <h2>Text Translation</h2>
+            <div class="form-group">
+                <label for="text-input">Vietnamese Text</label>
+                <textarea id="text-input" placeholder="Enter Vietnamese text here..."></textarea>
+            </div>
+            <button onclick="translateText()">Translate</button>
+            <div id="text-result" class="result-box">
+                <div class="result-item">
+                    <div class="result-label">Source (Vietnamese)</div>
+                    <div class="result-text" id="text-source"></div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">Translation (English)</div>
+                    <div class="result-text" id="text-translation"></div>
+                </div>
+            </div>
+            <div id="text-status"></div>
+        </div>
+        
+        <!-- Audio Upload Tab -->
+        <div id="audio" class="tab-content">
+            <h2>Audio File Translation</h2>
+            <div class="form-group">
+                <label for="audio-file">Select Audio File (WAV, MP3, OGG, FLAC)</label>
+                <div class="file-input-wrapper">
+                    <label class="file-input-label" for="audio-file">
+                        Click to upload or drag & drop
+                    </label>
+                    <input type="file" id="audio-file" accept="audio/*">
+                </div>
+            </div>
+            <button onclick="translateAudio()">Translate Audio</button>
+            <div id="audio-result" class="result-box">
+                <div class="result-item">
+                    <div class="result-label">Transcription (Vietnamese)</div>
+                    <div class="result-text" id="audio-source"></div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">Translation (English)</div>
+                    <div class="result-text" id="audio-translation"></div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">Duration</div>
+                    <div class="result-text" id="audio-duration"></div>
+                </div>
+            </div>
+            <div id="audio-status"></div>
+        </div>
+        
+        <!-- Live Recording Tab -->
+        <div id="live" class="tab-content">
+            <h2>Live Audio Recording</h2>
+            <p style="margin-bottom: 20px; color: #666;">
+                Record audio directly from your microphone and get real-time translations.
+            </p>
+            <div class="recording-controls">
+                <button class="record-btn" id="record-btn" onclick="startRecording()">🔴 Start Recording</button>
+                <button class="stop-btn" id="stop-btn" onclick="stopRecording()" disabled>Stop Recording</button>
+            </div>
+            <div id="live-result" class="result-box">
+                <div id="live-translations"></div>
+            </div>
+            <div id="live-status"></div>
+        </div>
+        
+        <!-- History Tab -->
+        <div id="history" class="tab-content">
+            <h2>Translation History</h2>
+            <button onclick="loadHistory()" style="margin-bottom: 20px;">Load History</button>
+            <div id="history-list" class="history-list"></div>
+            <div id="history-status"></div>
+        </div>
+    </div>
+    
+    <script src="/static/script.js"></script>
+</body>
+</html>
