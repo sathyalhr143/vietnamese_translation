@@ -7,7 +7,7 @@ from datetime import datetime
 import os
 import io
 import numpy as np
-import librosa
+
 from scipy.io import wavfile
 
 # Page configuration
