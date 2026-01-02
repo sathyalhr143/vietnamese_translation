@@ -7,7 +7,6 @@ openai
 pydub
 python-dotenv
 pydantic
-pydantic-settings
 fastapi
 uvicorn
 python-multipart
