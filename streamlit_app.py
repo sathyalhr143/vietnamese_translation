@@ -5,8 +5,40 @@ import os
 import io
 from datetime import datetime
 import tempfile
+import sys
 
-# Import backend modules directly (no API calls)
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv()
+
+# Check if OPENAI_API_KEY is set
+if not os.getenv('OPENAI_API_KEY'):
+    st.error("""
+    ⚠️ **Missing OPENAI_API_KEY Configuration**
+    
+    This app requires an OpenAI API key to function. Please set it up:
+    
+    **Option 1: Environment Variable**
+    ```bash
+    export OPENAI_API_KEY='your-api-key-here'
+    streamlit run streamlit_app.py
+    ```
+    
+    **Option 2: .env File**
+    Create a `.env` file in the project root:
+    ```
+    OPENAI_API_KEY=your-api-key-here
+    ```
+    
+    **Option 3: Streamlit Cloud Secrets**
+    Go to your app settings → Secrets → Add `OPENAI_API_KEY`
+    
+    Get your API key from: https://platform.openai.com/api-keys
+    """)
+    st.stop()
+
+# Import backend modules directly (lazy loading prevents whisper import errors)
+# Import directly from modules to avoid src/__init__.py which has heavy imports
 from src.translator import Translator
 from src.audio import AudioProcessor
 from src.database import TranslationDatabase
@@ -194,32 +226,26 @@ st.markdown("""
         border-radius: 6px;
     }
     
-    /* Info */
-    [data-testid="stAlert"] > div > div[role="alert"] {
-        background-color: rgba(0, 122, 204, 0.1) !important;
-        color: var(--accent-cyan) !important;
-        border: 1px solid var(--accent-blue) !important;
+    /* Toolbar and header area */
+    [data-testid="stToolbar"] {
+        background-color: var(--secondary-bg) !important;
+        border-bottom: 1px solid var(--tertiary-bg) !important;
     }
     
-    /* Success */
-    .success {
-        background-color: rgba(76, 201, 154, 0.1) !important;
-        color: var(--accent-cyan) !important;
-        border: 1px solid #4ec9b0 !important;
+    [data-testid="stDecoration"] {
+        background-color: var(--primary-bg) !important;
     }
     
-    /* Warning */
-    .warning {
-        background-color: rgba(220, 220, 170, 0.1) !important;
-        color: var(--accent-yellow) !important;
-        border: 1px solid var(--accent-yellow) !important;
+    /* Top right buttons (rerun, settings, etc) */
+    button[kind="secondary"] {
+        background-color: var(--secondary-bg) !important;
+        color: var(--text-primary) !important;
+        border: 1px solid var(--tertiary-bg) !important;
     }
     
-    /* Error */
-    .error {
-        background-color: rgba(240, 100, 100, 0.1) !important;
-        color: #ff6b6b !important;
-        border: 1px solid #ff6b6b !important;
+    button[kind="secondary"]:hover {
+        background-color: var(--tertiary-bg) !important;
+        border-color: var(--accent-blue) !important;
     }
     
     /* File uploader */
@@ -228,49 +254,6 @@ st.markdown("""
         border: 2px dashed var(--accent-blue);
         border-radius: 8px;
         padding: 20px;
-    }
-    
-    /* Spinners and progress */
-    .stSpinner > div {
-        border-top-color: var(--accent-blue) !important;
-    }
-    
-    /* Number inputs */
-    .stNumberInput input {
-        background-color: var(--secondary-bg) !important;
-        color: var(--text-primary) !important;
-    }
-    
-    /* Markdown text */
-    p, li {
-        color: var(--text-primary) !important;
-    }
-    
-    /* Links */
-    a {
-        color: var(--accent-blue) !important;
-    }
-    
-    a:hover {
-        color: var(--accent-cyan) !important;
-    }
-    
-    /* Horizontal lines */
-    hr {
-        border-color: var(--tertiary-bg) !important;
-    }
-    
-    /* Code blocks */
-    code {
-        background-color: var(--secondary-bg) !important;
-        color: var(--accent-cyan) !important;
-        padding: 2px 6px;
-        border-radius: 3px;
-    }
-    
-    pre {
-        background-color: var(--secondary-bg) !important;
-        border: 1px solid var(--tertiary-bg) !important;
     }
     
     /* Scrollbar */
@@ -291,38 +274,6 @@ st.markdown("""
     ::-webkit-scrollbar-thumb:hover {
         background: var(--accent-blue);
     }
-    
-    /* Toolbar and header area */
-    [data-testid="stToolbar"] {
-        background-color: var(--secondary-bg) !important;
-        border-bottom: 1px solid var(--tertiary-bg) !important;
-    }
-    
-    [data-testid="stDecoration"] {
-        background-color: var(--primary-bg) !important;
-    }
-    
-    /* Top right buttons (rerun, settings, etc) */
-    .stActionButton {
-        background-color: transparent !important;
-    }
-    
-    button[kind="secondary"] {
-        background-color: var(--secondary-bg) !important;
-        color: var(--text-primary) !important;
-        border: 1px solid var(--tertiary-bg) !important;
-    }
-    
-    button[kind="secondary"]:hover {
-        background-color: var(--tertiary-bg) !important;
-        border-color: var(--accent-blue) !important;
-    }
-    
-    /* Header message area */
-    .stAlert > div {
-        background-color: var(--secondary-bg) !important;
-        border: 1px solid var(--tertiary-bg) !important;
-    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -330,13 +281,30 @@ st.markdown("""
 @st.cache_resource
 def initialize_services():
     """Initialize translator, audio processor, and database."""
-    translator = Translator()
-    audio_processor = AudioProcessor()
-    database = TranslationDatabase()
-    return translator, audio_processor, database
+    try:
+        translator = Translator()
+        audio_processor = AudioProcessor()
+        database = TranslationDatabase()
+        return translator, audio_processor, database
+    except ValueError as e:
+        if "OPENAI_API_KEY" in str(e):
+            st.error("""
+            ⚠️ **API Key Error**
+            
+            The OPENAI_API_KEY is not set. Please configure it:
+            - Set environment variable: `export OPENAI_API_KEY='your-key'`
+            - Or add to .env file: `OPENAI_API_KEY=your-key`
+            - Or add to Streamlit Cloud secrets
+            """)
+        else:
+            st.error(f"Error initializing services: {str(e)}")
+        st.stop()
 
-translator, audio_processor, database = initialize_services()
-
+try:
+    translator, audio_processor, database = initialize_services()
+except Exception as e:
+    st.error(f"Failed to initialize services: {str(e)}")
+    st.stop()
 
 # Header
 st.title("🌐 Vietnamese Translation Service")
@@ -460,9 +428,9 @@ with tab2:
                     try:
                         # Transcribe audio directly
                         transcription_result = audio_processor.transcribe_audio_from_file_chunked(tmp_path)
-                        vietnamese_text = transcription_result.get("text", "")
-                        confidence = transcription_result.get("confidence", 0)
-                        duration = transcription_result.get("duration_seconds", 0)
+                        vietnamese_text = transcription_result.text
+                        confidence = transcription_result.confidence
+                        duration = transcription_result.duration
                         
                         # Translate transcribed text
                         english_text = translator.translate_text(vietnamese_text)

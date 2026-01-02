@@ -1,6 +1,5 @@
 """Audio capture and transcription module."""
 
-import whisper
 import sounddevice as sd
 import numpy as np
 from typing import Dict, List
@@ -40,6 +39,7 @@ class AudioProcessor:
             model_size: Model size (tiny, base, small, medium, large)
         """
         try:
+            import whisper
             logger.info(f"Loading Whisper model: {model_size}")
             self.whisper_model = whisper.load_model(model_size, )
             logger.info("Whisper model loaded successfully")

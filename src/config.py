@@ -1,35 +1,35 @@
-"""Configuration management using Pydantic Settings."""
+"""Configuration management using environment variables."""
 
-from pydantic_settings import BaseSettings
-from pydantic import Field
+import os
+from dotenv import load_dotenv
+
+# Load .env file if it exists
+load_dotenv()
 
 
-class Settings(BaseSettings):
+class Settings:
     """Application settings loaded from environment variables."""
     
-    # OpenAI Configuration
-    openai_api_key: str = Field(..., description="OpenAI API key")
-    
-    # Translation Configuration
-    source_language: str = Field(default="vi", description="Source language code")
-    target_language: str = Field(default="en", description="Target language code")
-    
-    # Audio Configuration
-    audio_sample_rate: int = Field(default=16000, description="Audio sample rate in Hz")
-    audio_chunk_duration: int = Field(default=10, description="Audio chunk duration in seconds")
-    whisper_model_size: str = Field(default="small", description="Whisper model size")
-    
-    # Database Configuration
-    db_path: str = Field(default="translations.db", description="Path to SQLite database")
-    
-    # Logging Configuration
-    log_level: str = Field(default="INFO", description="Logging level")
-    
-    class Config:
-        env_file = ".env"
-        env_file_encoding = 'utf-8'
-        case_sensitive = False
+    def __init__(self):
+        # OpenAI Configuration
+        self.openai_api_key = os.getenv("OPENAI_API_KEY", "")
+        
+        # Translation Configuration
+        self.source_language = os.getenv("SOURCE_LANGUAGE", "vi")
+        self.target_language = os.getenv("TARGET_LANGUAGE", "en")
+        
+        # Audio Configuration
+        self.audio_sample_rate = int(os.getenv("AUDIO_SAMPLE_RATE", 16000))
+        self.audio_chunk_duration = int(os.getenv("AUDIO_CHUNK_DURATION", 10))
+        self.whisper_model_size = os.getenv("WHISPER_MODEL_SIZE", "small")
+        
+        # Database Configuration
+        self.db_path = os.getenv("DB_PATH", "translations.db")
+        
+        # Logging Configuration
+        self.log_level = os.getenv("LOG_LEVEL", "INFO")
 
 
 # Load settings
 settings = Settings()
+
