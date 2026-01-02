@@ -4,16 +4,16 @@ A modern, production-ready AI-powered translation platform with **web UI**, **RE
 
 ## Features
 
-- 🌐 **Web Interface**: User-friendly UI for all features
-- 📝 **Text Translation**: Vietnamese to English translation
-- 🎤 **Audio Upload**: Process WAV, MP3, OGG, FLAC files
-- 🔴 **Live Recording**: Record audio directly from browser microphone
-- 📚 **History Tracking**: View all past translations
+- 🌐 **Web Interface**: Streamlit-based UI for intuitive translation experience
+- 📝 **Text Translation**: Vietnamese to English translation with chunked processing for long texts
+- 🎤 **Audio Upload**: Process WAV, MP3, OGG, FLAC files up to 36+ MB with automatic chunking
+- 📊 **Large File Support**: Automatic audio file chunking for files exceeding 25 MB Whisper API limit
+- 📚 **History Tracking**: View all past translations with metadata (duration, confidence)
 - 🔌 **REST API**: Full API for programmatic access
-- 🔗 **WebSocket**: Real-time audio streaming support
 - 💾 **Persistent Storage**: SQLite database for translation history
 - 🚀 **Cloud-Ready**: Optimized for Render deployment
 - ✅ **Type-Safe**: Full Pydantic validation for all data
+- 🧠 **Intelligent Chunking**: Sentence-aware text chunking for optimal translation quality
 
 ## Quick Start
 
@@ -42,12 +42,19 @@ cp .env.example .env
 # Edit .env and add your OPENAI_API_KEY
 ```
 
-5. Run the server:
+5. Start the FastAPI backend:
 ```bash
-python -m uvicorn app:app --reload
+source .venv/bin/activate
+python -m uvicorn src.app:app --reload --port 8000
 ```
 
-6. Open browser to `http://localhost:8000`
+6. In a new terminal, start the Streamlit frontend:
+```bash
+source .venv/bin/activate
+streamlit run streamlit_app.py
+```
+
+7. Open browser to `http://localhost:8501` for the Streamlit interface
 
 ## Project Structure
 
@@ -72,14 +79,27 @@ vienamese_translation/
 
 ## Usage
 
-### Web Interface
+### Web Interface (Streamlit)
 
-Simply open `http://localhost:8000` in your browser:
+Open `http://localhost:8501` in your browser with 3 main tabs:
 
-1. **Text Translation Tab**: Paste Vietnamese text, get English translation
-2. **Audio Upload Tab**: Upload audio files (WAV, MP3, OGG, FLAC)
-3. **Live Recording Tab**: Record directly from microphone
-4. **History Tab**: View all past translations
+1. **Text Translation Tab**: 
+   - Paste Vietnamese text
+   - Get instant English translation
+   - View translation metadata (ID, timestamp)
+
+2. **Audio Translation Tab**: 
+   - Upload audio files (WAV, MP3, OGG, FLAC)
+   - Files up to 36+ MB supported (automatically chunked)
+   - Displays:
+     - Vietnamese transcription (from Whisper)
+     - English translation
+     - Duration, confidence score, translation ID
+
+3. **History Tab**: 
+   - View all past translations
+   - Sort by timestamp
+   - See metadata for each translation
 
 ### REST API
 
@@ -198,6 +218,110 @@ Edit `.env` or set environment variables:
   - `medium`/`large`: Most accurate, slower
 
 - **API Latency**: ~2-5s for full pipeline (transcription + translation)
+
+## Development Roadblocks & Solutions
+
+### 1. **Dependency Management Issues**
+**Problem**: Pydantic version compatibility conflict between FastAPI and direct pydantic-settings imports.
+
+**Solution**: Standardized imports to use `from pydantic_settings import BaseSettings` and removed redundant dependencies. Used `uv pip` for faster, more reliable dependency resolution.
+
+---
+
+### 2. **HTTP Exception Handling**
+**Problem**: Confusion between `HTTP` and `HTTPException` in FastAPI, causing import errors.
+
+**Solution**: Clarified that `HTTPException` from `fastapi` is the correct exception type for REST API error responses. Updated all error handling accordingly.
+
+---
+
+### 3. **Whisper Confidence Calculation**
+**Problem**: Whisper's `avg_logprob` values are in log scale (-1 to 0), not directly interpretable as confidence (0-1 scale).
+
+**Solution**: Implemented exponential conversion: `confidence = exp(avg_logprob)` to transform log probabilities to interpretable confidence scores between 0 and 1.
+
+---
+
+### 4. **Frontend Migration from HTML/CSS to Streamlit**
+**Problem**: Initial HTML/CSS frontend was complex and difficult to maintain. Required switching to a more user-friendly framework.
+
+**Solution**: Migrated to Streamlit, which provides:
+- Clean, component-based UI
+- Easy state management
+- Built-in file upload handling
+- Minimal code (~300 lines for full interface)
+
+---
+
+### 5. **Live Translation with WebRTC (Abandoned Feature)**
+**Problem**: Attempted to implement live audio streaming using `streamlit-webrtc`, but encountered multiple issues:
+- ScriptRunContext warnings from async threads
+- Audio buffer resetting on every Streamlit rerun
+- Audio chunks not being reliably sent to backend
+- Complex state management across reruns
+
+**Solution**: **Removed** live translation feature in favor of file upload approach. This provides:
+- Better reliability
+- Simpler implementation
+- Similar user experience
+- Easier maintenance
+
+---
+
+### 6. **Audio Buffer Memory Issues**
+**Problem**: Using `uploaded_file.getbuffer()` created numpy array references that couldn't be resized during garbage collection, causing `BufferError: Existing exports of data: object cannot be re-sized`.
+
+**Solution**: Changed to `uploaded_file.read()` which returns a clean copy of bytes instead of a buffer view. Wrapped in `io.BytesIO()` for file-like object compatibility.
+
+---
+
+### 7. **Large File Processing Limitations**
+**Problem**: OpenAI Whisper API has a 25 MB file size limit. Uploading files >25 MB directly would fail.
+
+**Solution**: Implemented intelligent audio chunking:
+- Split large files into ~20 MB chunks
+- Process each chunk independently with Whisper
+- Combine transcriptions with proper spacing
+- Seamlessly handles files up to 36+ MB in practice
+
+---
+
+### 8. **Translation API Failure with Long Text**
+**Problem**: OpenAI GPT-4o mini was returning error response `"I'm sorry, but I can't assist with that."` when given the full 33,000+ character transcription.
+
+**Root Cause**: Long transcriptions exceeded optimal token limits or triggered model behavior issues.
+
+**Solution**: Implemented intelligent text chunking:
+- Split transcriptions into ~2000 character chunks
+- Respects sentence boundaries to maintain meaning
+- Translates each chunk independently
+- Combines translations with space preservation
+- Maintains context and narrative flow
+
+---
+
+### 9. **Empty Transcription Results**
+**Problem**: Initial chunked audio processing returned empty transcription text, causing downstream translation to fail.
+
+**Solution**: Added verbose logging throughout the pipeline to identify at which stage text was being lost. Improved chunk size calculations and error handling for edge cases.
+
+---
+
+### 10. **Accidental File Deletion**
+**Problem**: User accidentally deleted the main `streamlit_app.py` file during development.
+
+**Solution**: Restored file from working state and implemented proper version control practices with Git commits.
+
+---
+
+## Lessons Learned
+
+1. **Chunking is Essential**: Both audio and text processing benefit from intelligent chunking to work within API limits.
+2. **Buffer Management**: Be careful with numpy/memory buffer references in web frameworks like Streamlit.
+3. **Verbose Logging**: Detailed logging at each pipeline stage makes debugging much easier.
+4. **Feature Prioritization**: Sometimes simpler features (file upload vs live streaming) provide better user experience.
+5. **Token Awareness**: Always consider token limits when working with language models.
+6. **Sentence Boundaries**: Respecting sentence structure when chunking preserves translation quality.
 
 ## Troubleshooting
 
