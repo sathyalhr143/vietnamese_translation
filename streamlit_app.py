@@ -37,12 +37,8 @@ if not os.getenv('OPENAI_API_KEY'):
     """)
     st.stop()
 
-# Import backend modules directly (lazy loading prevents whisper import errors)
-# Import directly from modules to avoid src/__init__.py which has heavy imports
-from src.translator import Translator
-from src.audio import AudioProcessor
-from src.database import TranslationDatabase
-from src.models import TranslationRecord
+# Lazy import - delay until after API key check
+# This prevents import errors on Streamlit Cloud where packages might not be installed yet
 
 # Page configuration
 st.set_page_config(
@@ -282,10 +278,23 @@ st.markdown("""
 def initialize_services():
     """Initialize translator, audio processor, and database."""
     try:
+        # Import here to delay until after API key check
+        from src.translator import Translator
+        from src.audio import AudioProcessor
+        from src.database import TranslationDatabase
+        
         translator = Translator()
         audio_processor = AudioProcessor()
         database = TranslationDatabase()
         return translator, audio_processor, database
+    except ImportError as e:
+        st.error(f"""
+        ❌ **Import Error**: {str(e)}
+        
+        Missing dependency. This usually means a package didn't install properly on Streamlit Cloud.
+        Try redeploying the app or check the logs for more details.
+        """)
+        st.stop()
     except ValueError as e:
         if "OPENAI_API_KEY" in str(e):
             st.error("""
@@ -352,6 +361,8 @@ with tab1:
         else:
             with st.spinner("🔄 Translating..."):
                 try:
+                    from src.models import TranslationRecord
+                    
                     # Call translator directly
                     translated_text = translator.translate_text(text_input)
                     
@@ -436,6 +447,7 @@ with tab2:
                         english_text = translator.translate_text(vietnamese_text)
                         
                         # Store in database
+                        from src.models import TranslationRecord
                         record = TranslationRecord(
                             source_language="vi",
                             target_language="en",
