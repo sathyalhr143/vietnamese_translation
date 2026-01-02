@@ -161,14 +161,8 @@ class AudioProcessor:
                 # avg_logprob is typically between -1 and 0, with 0 being highest confidence
                 confidence = np.mean([np.exp(c) for c in confidences]) if confidences else 0.0
             
-            # Get duration from result if available
+            # Get duration from Whisper result
             duration = result.get('duration', 0.0)
-            if duration == 0:
-                import librosa
-                try:
-                    duration = librosa.get_duration(filename=file_path)
-                except:
-                    duration = 0.0
             
             return TranscriptionResult(
                 text=text,
