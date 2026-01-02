@@ -27,16 +27,15 @@ RUN echo "[server]" > .streamlit/config.toml && \
     echo "port = 8501" >> .streamlit/config.toml && \
     echo "enableXsrfProtection = false" >> .streamlit/config.toml
 
-# Expose ports
+# Expose ports (8501 for Streamlit, 8000 for backend API)
 EXPOSE 8501 8000
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 
-# Run Streamlit app
-CMD ["streamlit", "run", "streamlit_app.py"]# Health check
+# Health check for Streamlit
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8000/api/health')"
+    CMD curl -f http://localhost:8501/_stcore/health || exit 1
 
-# Run the application
-CMD ["python", "-m", "uvicorn", "src.app:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run Streamlit app
+CMD ["streamlit", "run", "streamlit_app.py", "--server.port=8501", "--server.headless=true"]
