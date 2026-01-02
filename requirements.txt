@@ -1,9 +1,9 @@
 setuptools-rust
 openai-whisper
+openai
 sounddevice
 numpy
 scipy
-openai
 pydub
 python-dotenv
 pydantic
