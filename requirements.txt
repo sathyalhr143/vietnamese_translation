@@ -12,3 +12,7 @@ fastapi
 uvicorn
 python-multipart
 librosa
+streamlit
+requests
+streamlit-webrtc
+av

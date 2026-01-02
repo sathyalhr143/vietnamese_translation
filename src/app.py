@@ -4,8 +4,6 @@ import os
 import io
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, File, UploadFile, WebSocket, HTTPException
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
@@ -60,10 +58,6 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Mount static files (frontend)
-frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
-app.mount("/static", StaticFiles(directory=frontend_path), name="static")
-
 
 # ==================== Pydantic Models ====================
 
@@ -81,13 +75,6 @@ class TranslationHistoryResponse(BaseModel):
 
 
 # ==================== REST API Endpoints ====================
-
-@app.get("/")
-async def get_home():
-    """Serve the web interface."""
-    frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend", "index.html")
-    return FileResponse(frontend_path)
-
 
 @app.get("/api/health")
 async def health_check():
@@ -124,7 +111,7 @@ async def translate_text(request: TranslationRequest):
         )
         
         # Create translation record
-        from models import TranslationRecord
+        from src.models import TranslationRecord
         record = TranslationRecord(
             source_language=request.source_language,
             target_language=request.target_language,
@@ -154,6 +141,7 @@ async def translate_audio(file: UploadFile = File(...)):
     Upload and translate audio file.
     
     Supports: WAV, MP3, OGG, FLAC, etc.
+    Files larger than 25 MB will be automatically chunked.
     
     Args:
         file: Audio file to translate
@@ -179,10 +167,10 @@ async def translate_audio(file: UploadFile = File(...)):
             f.write(content)
         
         # Process audio
-        logger.info(f"Processing audio file: {file.filename}")
+        logger.info(f"Processing audio file: {file.filename} ({len(content) / 1024 / 1024:.1f} MB)")
         
-        # Transcribe with Whisper
-        transcription = translator.audio_processor.transcribe_audio_from_file(temp_path)
+        # Transcribe with Whisper (handles chunking automatically for large files)
+        transcription = translator.audio_processor.transcribe_audio_from_file_chunked(temp_path)
         
         if not transcription.text:
             raise HTTPException(status_code=400, detail="No speech detected in audio file")
@@ -195,7 +183,7 @@ async def translate_audio(file: UploadFile = File(...)):
         )
         
         # Store in database
-        from models import TranslationRecord
+        from src.models import TranslationRecord
         record = TranslationRecord(
             source_language=translator.config.source_language,
             target_language=translator.config.target_language,
@@ -369,7 +357,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         )
                         
                         # Store in database
-                        from models import TranslationRecord
+                        from src.models import TranslationRecord
                         record = TranslationRecord(
                             source_language=translator.config.source_language,
                             target_language=translator.config.target_language,
