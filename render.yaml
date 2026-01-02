@@ -1,11 +1,11 @@
 services:
   - type: web
-    name: vietnamese-translation
+    name: vietnamese-translation-streamlit
     env: python
     region: oregon
     plan: free
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "python -m uvicorn src.app:app --host 0.0.0.0 --port 8000"
+    startCommand: "streamlit run streamlit_app.py --server.port=8501 --server.headless=true"
     envVars:
       - key: OPENAI_API_KEY
         scope: build,runtime
@@ -26,5 +26,3 @@ services:
         value: INFO
       - key: PYTHON_VERSION
         value: "3.11"
-      - key: PORT
-        value: "8000"

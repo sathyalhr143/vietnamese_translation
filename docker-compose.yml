@@ -1,11 +1,12 @@
 version: '3.8'
 
 services:
-  app:
+  streamlit:
     build: .
-    container_name: vietnamese-translation
+    container_name: vietnamese-translation-streamlit
     ports:
-      - "8000:8000"
+      - "8501:8501"  # Streamlit UI
+      - "8000:8000"  # Backend API
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - SOURCE_LANGUAGE=vi
@@ -15,18 +16,17 @@ services:
       - AUDIO_CHUNK_DURATION=10
       - DB_PATH=/app/translations.db
       - LOG_LEVEL=INFO
-      - PORT=8000
     volumes:
       - ./:/app
       - ./logs:/app/logs
       - ./translations.db:/app/translations.db
     stdin_open: true
     tty: true
-    # Uncomment for development with auto-reload
-    # command: python -m uvicorn app:app --host 0.0.0.0 --port 8000 --reload
     networks:
       - app-network
 
 networks:
+  app-network:
+    driver: bridge
   app-network:
     driver: bridge

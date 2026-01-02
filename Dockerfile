@@ -18,17 +18,23 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Create logs directory
-RUN mkdir -p logs
+# Create directories
+RUN mkdir -p logs && mkdir -p .streamlit
 
-# Expose port
-EXPOSE 8000
+# Create Streamlit config
+RUN echo "[server]" > .streamlit/config.toml && \
+    echo "headless = true" >> .streamlit/config.toml && \
+    echo "port = 8501" >> .streamlit/config.toml && \
+    echo "enableXsrfProtection = false" >> .streamlit/config.toml
+
+# Expose ports
+EXPOSE 8501 8000
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
-ENV PORT=8000
 
-# Health check
+# Run Streamlit app
+CMD ["streamlit", "run", "streamlit_app.py"]# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import requests; requests.get('http://localhost:8000/api/health')"
 
