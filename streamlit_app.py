@@ -36,7 +36,9 @@ if not os.getenv('OPENAI_API_KEY'):
     Get your API key from: https://platform.openai.com/api-keys
     """)
     st.stop()
+
 # Import backend modules directly (lazy loading prevents whisper import errors)
+# Import directly from modules to avoid src/__init__.py which has heavy imports
 from src.translator import Translator
 from src.audio import AudioProcessor
 from src.database import TranslationDatabase
