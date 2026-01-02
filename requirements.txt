@@ -1,6 +1,5 @@
 setuptools-rust
 openai-whisper
-sounddevice
 numpy
 scipy
 openai
@@ -8,11 +7,4 @@ pydub
 python-dotenv
 pydantic
 pydantic-settings
-fastapi
-uvicorn
-python-multipart
-librosa
 streamlit
-requests
-streamlit-webrtc
-av

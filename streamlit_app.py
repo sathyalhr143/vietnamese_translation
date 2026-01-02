@@ -1,14 +1,16 @@
-"""Streamlit frontend for Vietnamese Translation API."""
+"""Streamlit frontend for Vietnamese Translation - Direct Execution Mode."""
 
 import streamlit as st
-import requests
-import json
-from datetime import datetime
 import os
 import io
-import numpy as np
-import librosa
-from scipy.io import wavfile
+from datetime import datetime
+import tempfile
+
+# Import backend modules directly (no API calls)
+from src.translator import Translator
+from src.audio import AudioProcessor
+from src.database import TranslationDatabase
+from src.models import TranslationRecord
 
 # Page configuration
 st.set_page_config(
@@ -18,55 +20,322 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Styling
+# Styling - Dark VS Code Theme
 st.markdown("""
     <style>
+    :root {
+        --primary-bg: #1e1e1e;
+        --secondary-bg: #252526;
+        --tertiary-bg: #2d2d30;
+        --text-primary: #e0e0e0;
+        --text-secondary: #a0a0a0;
+        --accent-blue: #007acc;
+        --accent-cyan: #4ec9b0;
+        --accent-yellow: #dcdcaa;
+    }
+    
+    body, .main, .stApp {
+        background-color: var(--primary-bg) !important;
+        color: var(--text-primary) !important;
+    }
+    
+    .stApp {
+        background: linear-gradient(135deg, #1e1e1e 0%, #252526 100%);
+    }
+    
     .main {
         padding-top: 2rem;
+        background-color: var(--primary-bg);
     }
+    
+    /* Sidebar styling */
+    section[data-testid="stSidebar"] {
+        background-color: var(--secondary-bg) !important;
+        border-right: 1px solid var(--tertiary-bg);
+    }
+    
+    section[data-testid="stSidebar"] > div {
+        background-color: var(--secondary-bg) !important;
+    }
+    
+    /* Tabs styling */
+    .stTabs [data-baseweb="tab-list"] {
+        background-color: var(--secondary-bg);
+        border-bottom: 1px solid var(--tertiary-bg);
+    }
+    
     .stTabs [data-baseweb="tab-list"] button {
-        font-size: 18px;
-        padding: 10px 20px;
+        font-size: 16px;
+        padding: 12px 20px;
+        color: var(--text-secondary);
+        background-color: transparent;
+        border: none;
     }
+    
+    .stTabs [data-baseweb="tab-list"] button[aria-selected="true"] {
+        color: var(--accent-blue);
+        border-bottom: 2px solid var(--accent-blue);
+        background-color: rgba(0, 122, 204, 0.1);
+    }
+    
+    .stTabs [data-baseweb="tab-list"] button:hover {
+        color: var(--accent-cyan);
+    }
+    
+    /* Headers */
+    h1, h2, h3, h4, h5, h6 {
+        color: var(--accent-cyan) !important;
+    }
+    
+    h1 {
+        border-bottom: 1px solid var(--tertiary-bg);
+        padding-bottom: 1rem;
+    }
+    
+    /* Text areas and inputs */
+    .stTextArea > div > div > textarea {
+        background-color: var(--secondary-bg) !important;
+        color: var(--text-primary) !important;
+        border: 1px solid var(--tertiary-bg) !important;
+        border-radius: 6px;
+    }
+    
+    .stTextArea > div > div > textarea:focus {
+        border-color: var(--accent-blue) !important;
+        box-shadow: 0 0 8px rgba(0, 122, 204, 0.3) !important;
+    }
+    
+    input[type="text"], input[type="number"] {
+        background-color: var(--secondary-bg) !important;
+        color: var(--text-primary) !important;
+        border: 1px solid var(--tertiary-bg) !important;
+        border-radius: 4px;
+    }
+    
+    input[type="text"]:focus, input[type="number"]:focus {
+        border-color: var(--accent-blue) !important;
+    }
+    
+    /* Buttons */
+    .stButton > button {
+        background-color: var(--accent-blue) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 4px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+    }
+    
+    .stButton > button:hover {
+        background-color: #0098ff !important;
+        box-shadow: 0 0 12px rgba(0, 122, 204, 0.4) !important;
+    }
+    
+    .stButton > button:active {
+        background-color: #0066cc !important;
+    }
+    
+    /* Result boxes */
     .result-box {
-        background-color: #f0f2f6;
+        background-color: var(--tertiary-bg);
+        border-left: 3px solid var(--accent-blue);
         padding: 20px;
         border-radius: 8px;
         margin-top: 20px;
+        color: var(--text-primary);
     }
+    
+    /* Confidence badge */
     .confidence-badge {
-        background-color: #e3f2fd;
+        background-color: rgba(0, 122, 204, 0.15);
+        border: 1px solid var(--accent-blue);
         padding: 10px 15px;
-        border-radius: 5px;
+        border-radius: 6px;
         margin: 10px 0;
+        color: var(--accent-cyan);
+    }
+    
+    /* Expanders */
+    .streamlit-expanderHeader {
+        background-color: var(--secondary-bg) !important;
+        color: var(--text-primary) !important;
+    }
+    
+    .streamlit-expanderHeader:hover {
+        background-color: var(--tertiary-bg) !important;
+    }
+    
+    /* Metrics */
+    .stMetric {
+        background-color: var(--secondary-bg);
+        padding: 1rem;
+        border-radius: 6px;
+        border: 1px solid var(--tertiary-bg);
+    }
+    
+    .stMetric > div > div > div > h3 {
+        color: var(--text-secondary) !important;
+        font-size: 0.8rem;
+    }
+    
+    .stMetric > div > div > div > div {
+        color: var(--accent-cyan) !important;
+        font-size: 1.8rem;
+        font-weight: 600;
+    }
+    
+    /* Info, Success, Warning, Error messages */
+    .stAlert {
+        border-radius: 6px;
+        border: 1px solid;
+    }
+    
+    [data-testid="stAlert"] {
+        border-radius: 6px;
+    }
+    
+    /* Info */
+    [data-testid="stAlert"] > div > div[role="alert"] {
+        background-color: rgba(0, 122, 204, 0.1) !important;
+        color: var(--accent-cyan) !important;
+        border: 1px solid var(--accent-blue) !important;
+    }
+    
+    /* Success */
+    .success {
+        background-color: rgba(76, 201, 154, 0.1) !important;
+        color: var(--accent-cyan) !important;
+        border: 1px solid #4ec9b0 !important;
+    }
+    
+    /* Warning */
+    .warning {
+        background-color: rgba(220, 220, 170, 0.1) !important;
+        color: var(--accent-yellow) !important;
+        border: 1px solid var(--accent-yellow) !important;
+    }
+    
+    /* Error */
+    .error {
+        background-color: rgba(240, 100, 100, 0.1) !important;
+        color: #ff6b6b !important;
+        border: 1px solid #ff6b6b !important;
+    }
+    
+    /* File uploader */
+    [data-testid="stFileUploader"] {
+        background-color: var(--secondary-bg);
+        border: 2px dashed var(--accent-blue);
+        border-radius: 8px;
+        padding: 20px;
+    }
+    
+    /* Spinners and progress */
+    .stSpinner > div {
+        border-top-color: var(--accent-blue) !important;
+    }
+    
+    /* Number inputs */
+    .stNumberInput input {
+        background-color: var(--secondary-bg) !important;
+        color: var(--text-primary) !important;
+    }
+    
+    /* Markdown text */
+    p, li {
+        color: var(--text-primary) !important;
+    }
+    
+    /* Links */
+    a {
+        color: var(--accent-blue) !important;
+    }
+    
+    a:hover {
+        color: var(--accent-cyan) !important;
+    }
+    
+    /* Horizontal lines */
+    hr {
+        border-color: var(--tertiary-bg) !important;
+    }
+    
+    /* Code blocks */
+    code {
+        background-color: var(--secondary-bg) !important;
+        color: var(--accent-cyan) !important;
+        padding: 2px 6px;
+        border-radius: 3px;
+    }
+    
+    pre {
+        background-color: var(--secondary-bg) !important;
+        border: 1px solid var(--tertiary-bg) !important;
+    }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: var(--secondary-bg);
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: var(--tertiary-bg);
+        border-radius: 5px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: var(--accent-blue);
+    }
+    
+    /* Toolbar and header area */
+    [data-testid="stToolbar"] {
+        background-color: var(--secondary-bg) !important;
+        border-bottom: 1px solid var(--tertiary-bg) !important;
+    }
+    
+    [data-testid="stDecoration"] {
+        background-color: var(--primary-bg) !important;
+    }
+    
+    /* Top right buttons (rerun, settings, etc) */
+    .stActionButton {
+        background-color: transparent !important;
+    }
+    
+    button[kind="secondary"] {
+        background-color: var(--secondary-bg) !important;
+        color: var(--text-primary) !important;
+        border: 1px solid var(--tertiary-bg) !important;
+    }
+    
+    button[kind="secondary"]:hover {
+        background-color: var(--tertiary-bg) !important;
+        border-color: var(--accent-blue) !important;
+    }
+    
+    /* Header message area */
+    .stAlert > div {
+        background-color: var(--secondary-bg) !important;
+        border: 1px solid var(--tertiary-bg) !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# API Configuration
-API_BASE_URL = os.getenv("API_URL", "http://localhost:8000")
+# Initialize services once per session
+@st.cache_resource
+def initialize_services():
+    """Initialize translator, audio processor, and database."""
+    translator = Translator()
+    audio_processor = AudioProcessor()
+    database = TranslationDatabase()
+    return translator, audio_processor, database
 
-def make_api_call(endpoint: str, method: str = "GET", data=None, files=None):
-    """Make API calls to the backend."""
-    url = f"{API_BASE_URL}{endpoint}"
-    
-    try:
-        if method == "GET":
-            response = requests.get(url)
-        elif method == "POST":
-            if files:
-                response = requests.post(url, files=files)
-            elif data:
-                response = requests.post(url, json=data)
-            else:
-                response = requests.post(url)
-        
-        if response.status_code == 200:
-            return response.json()
-        else:
-            return {"error": f"API Error: {response.status_code} - {response.text}"}
-    except Exception as e:
-        return {"error": f"Connection error: {str(e)}"}
+translator, audio_processor, database = initialize_services()
 
 
 # Header
@@ -76,17 +345,14 @@ st.markdown("Real-time Vietnamese ↔ English translation powered by Whisper & G
 # Sidebar
 with st.sidebar:
     st.header("Settings")
-    api_url = st.text_input("API URL", value=API_BASE_URL, help="Backend API endpoint")
-    if api_url != API_BASE_URL:
-        os.environ["API_URL"] = api_url
-    
-    st.markdown("---")
     st.markdown("### About")
     st.markdown("""
     - **Audio Processing**: OpenAI Whisper
     - **Translation**: GPT-4o Mini
-    - **Backend**: FastAPI
+    - **Database**: SQLite (Local)
     - **Frontend**: Streamlit
+    
+    **Running in Direct Execution Mode** - All processing happens locally without a separate backend server.
     """)
 
 # Main tabs
@@ -117,32 +383,38 @@ with tab1:
             st.error("❌ Please enter text to translate")
         else:
             with st.spinner("🔄 Translating..."):
-                result = make_api_call(
-                    "/api/translate/text",
-                    method="POST",
-                    data={
-                        "text": text_input,
-                        "source_language": "vi",
-                        "target_language": "en"
-                    }
-                )
-            
-            if "error" in result:
-                st.error(f"Error: {result['error']}")
-            else:
-                st.success("✅ Translation Complete!")
+                try:
+                    # Call translator directly
+                    translated_text = translator.translate_text(text_input)
+                    
+                    # Store in database
+                    record = TranslationRecord(
+                        source_language="vi",
+                        target_language="en",
+                        source_text=text_input,
+                        translated_text=translated_text,
+                        confidence=1.0,  # Text translation has high confidence
+                        duration_seconds=0
+                    )
+                    translation_id = database.insert_translation(record)
+                    
+                    # Display results
+                    st.success("✅ Translation Complete!")
+                    
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.markdown("### Vietnamese (Source)")
+                        st.write(text_input)
+                    
+                    with col2:
+                        st.markdown("### English (Target)")
+                        st.write(translated_text)
+                    
+                    st.markdown("---")
+                    st.caption(f"Translation ID: {translation_id} | {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
                 
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.markdown("### Vietnamese (Source)")
-                    st.write(result.get("source_text", ""))
-                
-                with col2:
-                    st.markdown("### English (Target)")
-                    st.write(result.get("translated_text", ""))
-                
-                st.markdown("---")
-                st.caption(f"Translation ID: {result.get('translation_id')} | {result.get('timestamp')}")
+                except Exception as e:
+                    st.error(f"❌ Translation failed: {str(e)}")
 
 # ==================== TAB 2: AUDIO TRANSLATION ====================
 with tab2:
@@ -180,48 +452,64 @@ with tab2:
         else:
             try:
                 with st.spinner("🎵 Processing audio..."):
-                    # Copy file data to BytesIO to avoid buffer conflicts
-                    import io
-                    file_bytes = io.BytesIO(uploaded_file.read())
+                    # Save uploaded file to temporary location
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=f".{uploaded_file.name.split('.')[-1]}") as tmp_file:
+                        tmp_file.write(uploaded_file.getbuffer())
+                        tmp_path = tmp_file.name
                     
-                    files = {"file": (uploaded_file.name, file_bytes, uploaded_file.type)}
-                    result = make_api_call(
-                        "/api/translate/audio",
-                        method="POST",
-                        files=files
-                    )
+                    try:
+                        # Transcribe audio directly
+                        transcription_result = audio_processor.transcribe_audio_from_file_chunked(tmp_path)
+                        vietnamese_text = transcription_result.get("text", "")
+                        confidence = transcription_result.get("confidence", 0)
+                        duration = transcription_result.get("duration_seconds", 0)
+                        
+                        # Translate transcribed text
+                        english_text = translator.translate_text(vietnamese_text)
+                        
+                        # Store in database
+                        record = TranslationRecord(
+                            source_language="vi",
+                            target_language="en",
+                            source_text=vietnamese_text,
+                            translated_text=english_text,
+                            confidence=confidence,
+                            duration_seconds=duration
+                        )
+                        translation_id = database.insert_translation(record)
+                        
+                        # Display results
+                        st.success("✅ Audio Processing Complete!")
+                        
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            st.markdown("### Vietnamese Transcription")
+                            st.write(vietnamese_text)
+                        
+                        with col2:
+                            st.markdown("### English Translation")
+                            st.write(english_text)
+                        
+                        # Metadata
+                        st.markdown("---")
+                        col1, col2, col3 = st.columns(3)
+                        
+                        with col1:
+                            st.metric("Duration", f"{duration:.2f}s")
+                        
+                        with col2:
+                            confidence_pct = confidence * 100
+                            st.metric("Confidence", f"{confidence_pct:.1f}%")
+                        
+                        with col3:
+                            st.metric("Translation ID", translation_id)
+                    
+                    finally:
+                        # Clean up temporary file
+                        if os.path.exists(tmp_path):
+                            os.remove(tmp_path)
                 
-                if "error" in result:
-                    st.error(f"Error: {result['error']}")
-                else:
-                    st.success("✅ Audio Processing Complete!")
-                    
-                    # Display results
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        st.markdown("### Vietnamese Transcription")
-                        st.write(result.get("source_text", ""))
-                    
-                    with col2:
-                        st.markdown("### English Translation")
-                        st.write(result.get("translated_text", ""))
-                    
-                    # Metadata
-                    st.markdown("---")
-                    col1, col2, col3 = st.columns(3)
-                    
-                    with col1:
-                        duration = result.get("duration_seconds", 0)
-                        st.metric("Duration", f"{duration:.2f}s")
-                    
-                    with col2:
-                        confidence = result.get("confidence", 0)
-                        confidence_pct = confidence * 100
-                        st.metric("Confidence", f"{confidence_pct:.1f}%")
-                    
-                    with col3:
-                        st.metric("Translation ID", result.get("translation_id", "N/A"))
             except Exception as e:
                 st.error(f"❌ Processing failed: {str(e)}")
 
@@ -238,66 +526,91 @@ with tab3:
         if st.button("🔄 Refresh History", use_container_width=True):
             st.rerun()
     
+    with col3:
+        if st.button("🗑️ Clear All History", use_container_width=True):
+            try:
+                # Clear all translations from database
+                conn = __import__('sqlite3').connect(database.db_path)
+                cursor = conn.cursor()
+                cursor.execute('DELETE FROM translations')
+                cursor.execute('DELETE FROM audio_metadata')
+                conn.commit()
+                conn.close()
+                st.success("✅ History cleared!")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Error clearing history: {str(e)}")
+    
     # Fetch history
     with st.spinner("📚 Loading translation history..."):
-        history = make_api_call(f"/api/history?limit={limit}")
-    
-    if "error" in history:
-        st.error(f"Error loading history: {history['error']}")
-    elif not history.get("translations"):
-        st.info("📭 No translations yet. Start by translating some text or audio!")
-    else:
-        # Display stats
-        st.markdown("---")
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            st.metric("Total Translations", history.get("total_translations", 0))
-        
-        with col2:
-            st.metric("Showing", history.get("returned", 0))
-        
-        with col3:
-            if history.get("translations"):
-                avg_confidence = sum(t.get("confidence", 0) for t in history["translations"]) / len(history["translations"])
-                st.metric("Avg Confidence", f"{avg_confidence*100:.1f}%")
-        
-        st.markdown("---")
-        
-        # Display translations
-        for i, translation in enumerate(reversed(history.get("translations", [])), 1):
-            with st.expander(
-                f"**{i}. {translation.get('source_text', '')[:50]}...** | {translation.get('timestamp', '').split('T')[0]}"
-            ):
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    st.markdown("**Vietnamese (Source)**")
-                    st.write(translation.get("source_text", ""))
-                
-                with col2:
-                    st.markdown("**English (Target)**")
-                    st.write(translation.get("translated_text", ""))
-                
-                # Metadata
+        try:
+            history_records = database.get_all_translations()
+            total_count = len(history_records)
+            
+            # Apply limit to display
+            limit = int(limit)
+            displayed_records = history_records[:limit]
+            
+            if not history_records:
+                st.info("📭 No translations yet. Start by translating some text or audio!")
+            else:
+                # Display stats
                 st.markdown("---")
-                col1, col2, col3, col4 = st.columns(4)
+                col1, col2, col3 = st.columns(3)
                 
                 with col1:
-                    st.caption(f"📅 **Date**: {translation.get('timestamp', '').split('T')[0]}")
+                    st.metric("Total Translations", total_count)
                 
                 with col2:
-                    st.caption(f"⏱️ **Time**: {translation.get('timestamp', '').split('T')[1][:5]}")
+                    st.metric("Showing", len(displayed_records))
                 
                 with col3:
-                    duration = translation.get("duration_seconds", 0)
-                    if duration:
-                        st.caption(f"⏳ **Duration**: {duration:.2f}s")
+                    if displayed_records:
+                        avg_confidence = sum(r.confidence or 0 for r in displayed_records) / len(displayed_records)
+                        st.metric("Avg Confidence", f"{avg_confidence*100:.1f}%")
                 
-                with col4:
-                    confidence = translation.get("confidence", 0)
-                    if confidence:
-                        st.caption(f"🎯 **Confidence**: {confidence*100:.1f}%")
+                st.markdown("---")
+                
+                # Display translations
+                for i, translation in enumerate(displayed_records, 1):
+                    timestamp = translation.timestamp or "Unknown"
+                    date_part = timestamp.split()[0] if timestamp else "Unknown"
+                    source_preview = translation.source_text[:50]
+                    
+                    with st.expander(
+                        f"**{i}. {source_preview}...** | {date_part}"
+                    ):
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            st.markdown("**Vietnamese (Source)**")
+                            st.write(translation.source_text)
+                        
+                        with col2:
+                            st.markdown("**English (Target)**")
+                            st.write(translation.translated_text)
+                        
+                        # Metadata
+                        st.markdown("---")
+                        col1, col2, col3, col4 = st.columns(4)
+                        
+                        with col1:
+                            st.caption(f"📅 **Date**: {date_part}")
+                        
+                        with col2:
+                            time_part = timestamp.split()[1][:5] if len(timestamp.split()) > 1 else "N/A"
+                            st.caption(f"⏱️ **Time**: {time_part}")
+                        
+                        with col3:
+                            if translation.duration_seconds:
+                                st.caption(f"⏳ **Duration**: {translation.duration_seconds:.2f}s")
+                        
+                        with col4:
+                            if translation.confidence:
+                                st.caption(f"🎯 **Confidence**: {translation.confidence*100:.1f}%")
+        
+        except Exception as e:
+            st.error(f"Error loading history: {str(e)}")
 
 # Footer
 st.markdown("---")
