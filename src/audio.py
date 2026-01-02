@@ -1,6 +1,5 @@
 """Audio capture and transcription module."""
 
-import whisper
 import sounddevice as sd
 import numpy as np
 from typing import Dict
@@ -32,6 +31,7 @@ class AudioProcessor:
             model_size: Model size (tiny, base, small, medium, large)
         """
         try:
+            import whisper
             logger.info(f"Loading Whisper model: {model_size}")
             self.whisper_model = whisper.load_model(model_size, )
             logger.info("Whisper model loaded successfully")
@@ -153,14 +153,8 @@ class AudioProcessor:
                 # avg_logprob is typically between -1 and 0, with 0 being highest confidence
                 confidence = np.mean([np.exp(c) for c in confidences]) if confidences else 0.0
             
-            # Get duration from result if available
+            # Get duration from Whisper result
             duration = result.get('duration', 0.0)
-            if duration == 0:
-                import librosa
-                try:
-                    duration = librosa.get_duration(filename=file_path)
-                except:
-                    duration = 0.0
             
             return TranscriptionResult(
                 text=text,

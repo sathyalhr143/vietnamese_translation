@@ -11,4 +11,4 @@ pydantic-settings
 fastapi
 uvicorn
 python-multipart
-librosa
+streamlit
