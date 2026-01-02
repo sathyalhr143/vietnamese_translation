@@ -23,7 +23,7 @@ services:
     stdin_open: true
     tty: true
     # Uncomment for development with auto-reload
-    # command: python -m uvicorn src.app:app --host 0.0.0.0 --port 8000 --reload
+    # command: python -m uvicorn app:app --host 0.0.0.0 --port 8000 --reload
     networks:
       - app-network
 

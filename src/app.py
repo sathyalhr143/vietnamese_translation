@@ -141,6 +141,7 @@ async def translate_audio(file: UploadFile = File(...)):
     Upload and translate audio file.
     
     Supports: WAV, MP3, OGG, FLAC, etc.
+    Files larger than 25 MB will be automatically chunked.
     
     Args:
         file: Audio file to translate
@@ -166,10 +167,10 @@ async def translate_audio(file: UploadFile = File(...)):
             f.write(content)
         
         # Process audio
-        logger.info(f"Processing audio file: {file.filename}")
+        logger.info(f"Processing audio file: {file.filename} ({len(content) / 1024 / 1024:.1f} MB)")
         
-        # Transcribe with Whisper
-        transcription = translator.audio_processor.transcribe_audio_from_file(temp_path)
+        # Transcribe with Whisper (handles chunking automatically for large files)
+        transcription = translator.audio_processor.transcribe_audio_from_file_chunked(temp_path)
         
         if not transcription.text:
             raise HTTPException(status_code=400, detail="No speech detected in audio file")
